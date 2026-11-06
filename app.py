@@ -27,35 +27,32 @@ DB_FILE = 'accounts.json'
 
 class FacebookPasswordEncryptor:
     @staticmethod
-    def get_public_key():
+    def get_public_key(proxies=None):
         try:
             url = 'https://b-graph.facebook.com/pwd_key_fetch'
             params = {
-                'version': '2',
-                'flow': 'CONTROLLER_INITIALIZATION',
-                'method': 'GET',
-                'fb_api_req_friendly_name': 'pwdKeyFetch',
-                'fb_api_caller_class': 'com.facebook.auth.login.AuthOperations',
+                'version': '2', 'flow': 'CONTROLLER_INITIALIZATION', 'method': 'GET',
+                'fb_api_req_friendly_name': 'pwdKeyFetch', 'fb_api_caller_class': 'com.facebook.auth.login.AuthOperations',
                 'access_token': '438142079694454|fc0a7caa49b192f64f6f5a6d9643bb28'
             }
-            response = requests.post(url, params=params).json()
+            response = requests.post(url, params=params, proxies=proxies, timeout=15).json()
             return response.get('public_key'), str(response.get('key_id', '25'))
-        except Exception as e:
-            raise Exception(f"Không thể lấy public key: {e}")
+        except Exception:
+            return None, "25"
 
     @staticmethod
-    def encrypt(password, public_key=None, key_id="25"):
+    def encrypt(password, public_key=None, key_id="25", proxies=None):
         if public_key is None:
-            public_key, key_id = FacebookPasswordEncryptor.get_public_key()
+            public_key, key_id = FacebookPasswordEncryptor.get_public_key(proxies)
+        if not public_key:
+            return password # Trả về pass gốc nếu không lấy được key
 
         try:
             rand_key = get_random_bytes(32)
             iv = get_random_bytes(12)
-
             pubkey = RSA.import_key(public_key)
             cipher_rsa = PKCS1_v1_5.new(pubkey)
             encrypted_rand_key = cipher_rsa.encrypt(rand_key)
-
             cipher_aes = AES.new(rand_key, AES.MODE_GCM, nonce=iv)
             current_time = int(time.time())
             cipher_aes.update(str(current_time).encode("utf-8"))
@@ -71,9 +68,8 @@ class FacebookPasswordEncryptor:
 
             encoded = base64.b64encode(buf.getvalue()).decode("utf-8")
             return f"#PWD_FB4A:2:{current_time}:{encoded}"
-        except Exception as e:
-            raise Exception(f"Lỗi khi mã hóa mật khẩu: {e}")
-
+        except Exception:
+            return password
 
 class FacebookAppTokens:
     APPS = {
@@ -101,7 +97,6 @@ class FacebookAppTokens:
                 return token[:i]
         return token
 
-
 class FacebookLogin:
     API_URL = "https://b-graph.facebook.com/auth/login"
     ACCESS_TOKEN = "350685531728|62f8ce9f74b12f84c123cc23437a4a32"
@@ -109,38 +104,28 @@ class FacebookLogin:
     SIG = "214049b9f17c38bd767de53752b53946"
 
     BASE_HEADERS = {
-        "content-type": "application/x-www-form-urlencoded",
-        "x-fb-net-hni": "45201",
-        "zero-rated": "0",
-        "x-fb-sim-hni": "45201",
-        "x-fb-connection-quality": "EXCELLENT",
-        "x-fb-friendly-name": "authenticate",
-        "x-fb-connection-bandwidth": "78032897",
-        "x-tigon-is-retry": "False",
-        "authorization": "OAuth null",
-        "x-fb-connection-type": "WIFI",
-        "x-fb-device-group": "3342",
-        "priority": "u=3,i",
-        "x-fb-http-engine": "Liger",
-        "x-fb-client-ip": "True",
-        "x-fb-server-cluster": "True"
+        "content-type": "application/x-www-form-urlencoded", "x-fb-net-hni": "45201", "zero-rated": "0",
+        "x-fb-sim-hni": "45201", "x-fb-connection-quality": "EXCELLENT", "x-fb-friendly-name": "authenticate",
+        "x-fb-connection-bandwidth": "78032897", "x-tigon-is-retry": "False", "authorization": "OAuth null",
+        "x-fb-connection-type": "WIFI", "x-fb-device-group": "3342", "priority": "u=3,i",
+        "x-fb-http-engine": "Liger", "x-fb-client-ip": "True", "x-fb-server-cluster": "True"
     }
 
-    def __init__(self, uid_phone_mail, password, machine_id=None, convert_all_tokens=False, twofactor_code=None):
+    def __init__(self, uid_phone_mail, password, machine_id=None, convert_all_tokens=False, twofactor_code=None, proxies=None):
         self.uid_phone_mail = uid_phone_mail
         self.twofactor_code = twofactor_code
+        self.proxies = proxies
 
         if password.startswith("#PWD_FB4A"):
             self.password = password
         else:
-            self.password = FacebookPasswordEncryptor.encrypt(password)
+            self.password = FacebookPasswordEncryptor.encrypt(password, proxies=self.proxies)
 
-        if convert_all_tokens:
-            self.convert_token_to = FacebookAppTokens.get_all_app_keys()
-        else:
-            self.convert_token_to = []
-
+        self.convert_token_to = FacebookAppTokens.get_all_app_keys() if convert_all_tokens else []
+        
         self.session = requests.Session()
+        if self.proxies: self.session.proxies.update(self.proxies)
+
         self.device_id = str(uuid.uuid4())
         self.adid = str(uuid.uuid4())
         self.secure_family_device_id = str(uuid.uuid4())
@@ -183,7 +168,7 @@ class FacebookLogin:
             if not app_id: return None
             response = requests.post('https://api.facebook.com/method/auth.getSessionforApp', data={
                 'access_token': access_token, 'format': 'json', 'new_app_id': app_id, 'generate_session_cookies': '1'
-            })
+            }, proxies=self.proxies, timeout=15)
             result = response.json()
             if 'access_token' in result:
                 token = result['access_token']
@@ -270,18 +255,18 @@ class FacebookLogin:
 # ==========================================================
 
 class FacebookAIBot:
-    def __init__(self, api_key, model_ai, api_url):
+    def __init__(self, api_key, model_ai, api_url, proxies=None):
         self.api_key = api_key
         self.model = model_ai
         self.api_url = api_url
-        self.timeout = 15
+        self.proxies = proxies
 
     def _goi_ai(self, prompt):
         headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
         payload = {"model": self.model, "messages": [{"role": "user", "content": prompt}], "temperature": 0.9, "max_tokens": 200}
         for attempt in range(3):
             try:
-                res = requests.post(self.api_url, headers=headers, json=payload, timeout=20)
+                res = requests.post(self.api_url, headers=headers, json=payload, timeout=20, proxies=self.proxies)
                 if res.status_code == 200: return res.json()["choices"][0]["message"]["content"].strip()
                 elif res.status_code == 429: time.sleep(15)
                 else: break
@@ -316,7 +301,6 @@ class FacebookAIBot:
         """
         ket_qua = self._goi_ai(prompt)
         return ket_qua if ket_qua else f"Hôm nay thật tuyệt! #teungheui_bot09"
-
 
 def tao_phien(c_dict, proxies=None):
     s = requests.Session()
@@ -406,6 +390,17 @@ def save_db(data):
     with open(DB_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
+def parse_proxy(proxy_str):
+    if not proxy_str or proxy_str.strip() == "": return None
+    p = proxy_str.strip()
+    if "://" in p: return {"http": p, "https": p}
+    parts = p.split(":")
+    if len(parts) == 4:
+        return {"http": f"http://{parts[2]}:{parts[3]}@{parts[0]}:{parts[1]}", "https": f"http://{parts[2]}:{parts[3]}@{parts[0]}:{parts[1]}"}
+    elif len(parts) == 2:
+        return {"http": f"http://{p}", "https": f"http://{p}"}
+    return None
+
 @app.route('/api/get_accounts', methods=['GET'])
 def get_accounts():
     return jsonify(load_db())
@@ -416,26 +411,43 @@ def add_account():
     uid = data.get('uid')
     password = data.get('pass')
     twofa = data.get('twofa')
+    proxy = data.get('proxy', '')
 
     if not uid or not password:
         return jsonify({'success': False, 'error': 'Thiếu thông tin'})
 
     accounts = load_db()
-    acc_id = str(uuid.uuid4())[:8]
-    
     new_acc = {
-        'id': acc_id,
+        'id': str(uuid.uuid4())[:8],
         'uid': uid,
         'password': password,
         'twofa': twofa,
+        'proxy': proxy,
         'fb_uid': None,
         'status': 'Mới thêm',
-        'token_data': None
+        'token_data': None # Nơi lưu token để giữ session
     }
     accounts.append(new_acc)
     save_db(accounts)
-    
     return jsonify({'success': True})
+
+@app.route('/api/check_proxy', methods=['POST'])
+def check_proxy():
+    data = request.json
+    proxy_str = data.get('proxy')
+    proxies = parse_proxy(proxy_str)
+    if not proxies: return jsonify({'success': False, 'error': 'Sai định dạng Proxy'})
+    
+    try:
+        start_time = time.time()
+        res = requests.get("https://api.ipify.org?format=json", proxies=proxies, timeout=10)
+        if res.status_code == 200:
+            ip = res.json().get('ip')
+            speed = round(time.time() - start_time, 2)
+            return jsonify({'success': True, 'ip': ip, 'speed': speed})
+        return jsonify({'success': False, 'error': 'Proxy phản hồi lỗi'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': 'Proxy Die hoặc Timeout'})
 
 @app.route('/api/delete_account/<acc_id>', methods=['DELETE'])
 def delete_account(acc_id):
@@ -444,7 +456,7 @@ def delete_account(acc_id):
     save_db(accounts)
     return jsonify({'success': True})
 
-# API LOGIN & LẤY TOKEN
+# API LOGIN & LẤY TOKEN (Chỉ chạy 1 lần đầu)
 @app.route('/api/login_and_get_token', methods=['POST'])
 def api_login_and_get_token():
     data = request.json
@@ -456,12 +468,18 @@ def api_login_and_get_token():
     if not acc:
         return jsonify({'success': False, 'error': 'Không tìm thấy tài khoản'})
 
+    # NẾU ĐÃ CÓ TOKEN THÌ KHÔNG LOGIN LẠI (GIỮ SESSION)
+    if acc.get('token_data'):
+        return jsonify({'success': True, 'message': 'Đã có session, không cần login lại'})
+
+    proxies = parse_proxy(acc.get('proxy'))
     try:
         fb = FacebookLogin(
             uid_phone_mail=acc['uid'], 
             password=acc['password'], 
             convert_all_tokens=True,
-            twofactor_code=acc['twofa']
+            twofactor_code=acc['twofa'],
+            proxies=proxies
         )
         result = fb.login()
         
@@ -478,19 +496,16 @@ def api_login_and_get_token():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
+# API GET TOKEN (Chỉ in ra, không login)
 @app.route('/api/get_token', methods=['POST'])
 def api_get_token():
     data = request.json
     acc_id = data.get('id')
-    
     accounts = load_db()
     acc = next((a for a in accounts if a['id'] == acc_id), None)
     
-    if not acc:
-        return jsonify({'success': False, 'error': 'Không tìm thấy tài khoản'})
-        
-    if not acc.get('token_data'):
-        return jsonify({'success': False, 'error': 'Chưa có token. Vui lòng bấm Start để login và lấy token trước.'})
+    if not acc: return jsonify({'success': False, 'error': 'Không tìm thấy tài khoản'})
+    if not acc.get('token_data'): return jsonify({'success': False, 'error': 'Chưa có token. Vui lòng bấm Start lần đầu để login.'})
 
     return jsonify(acc['token_data'])
 
@@ -509,22 +524,24 @@ def start_bot():
     token_eaaa = token_data['original_token']['access_token']
     cookie_dict = token_data['cookies']['dict']
     uid = cookie_dict.get("c_user", "0")
+    proxies = parse_proxy(acc.get('proxy'))
 
     def run_bot():
-        print(f"\n[{acc['uid']}] Bắt đầu nuôi acc...")
-        session = tao_phien(cookie_dict)
-        meta = lay_metadata(session)
+        print(f"\n[{acc['uid']}] Bắt đầu nuôi acc (Dùng Session có sẵn)...")
+        session = tao_phien(cookie_dict, proxies=proxies)
+        meta = lay_metadata(session, proxies=proxies)
         fb_dtsg, lsd = meta.get("fb_dtsg"), meta.get("lsd")
         
         if not fb_dtsg: 
-            print(f"[{acc['uid']}] Lỗi: Không lấy được fb_dtsg.")
+            print(f"[{acc['uid']}] Lỗi: Không lấy được fb_dtsg. Cookie có thể đã hết hạn.")
             return
             
         jazoest = "2" + "".join(str(ord(c)) for c in fb_dtsg)
         ai = FacebookAIBot(
             api_key="mstrl_N4uIpAyBTp3TNxDOPdLAfp64R1Sl9UVx_3DK7oj", 
             model_ai="mistral-tiny", 
-            api_url="https://api.mistral.ai/v1/chat/completions"
+            api_url="https://api.mistral.ai/v1/chat/completions",
+            proxies=proxies
         )
         
         session_count = 0
@@ -538,13 +555,13 @@ def start_bot():
                 chu_de = random.choice(["tâm trạng", "tình yêu", "cuộc sống", "sự mệt mỏi", "niềm vui"])
                 noi_dung = ai.tao_bai_dang(chu_de)
                 if noi_dung:
-                    post_id = graph_dang_bai(noi_dung, token_eaaa)
+                    post_id = graph_dang_bai(noi_dung, token_eaaa, proxies=proxies)
                     if post_id:
                         print(f"[{acc['uid']}] Đã đăng bài: {post_id}")
                         last_post_session = session_count
                 time.sleep(random.uniform(120, 180)) 
             
-            posts = get_feed_posts(session, uid, fb_dtsg, jazoest, lsd)
+            posts = get_feed_posts(session, uid, fb_dtsg, jazoest, lsd, proxies=proxies)
             if posts:
                 so_lan_tuong_tac = random.randint(5, 7)
                 selected_posts = random.sample(posts, min(len(posts), so_lan_tuong_tac))
@@ -554,9 +571,9 @@ def start_bot():
                     time.sleep(random.uniform(10, 15))
                     
                     reaction, comment = ai.phan_tich_bai_viet(msg)
-                    ok_rx = graph_tha_cam_xuc(full_pid, reaction, token_eaaa)
+                    ok_rx = graph_tha_cam_xuc(full_pid, reaction, token_eaaa, proxies=proxies)
                     time.sleep(random.uniform(2, 4))
-                    ok_cmt = graph_comment(full_pid, comment, token_eaaa)
+                    ok_cmt = graph_comment(full_pid, comment, token_eaaa, proxies=proxies)
                     
                     if ok_rx and ok_cmt:
                         print(f"[{acc['uid']}] Đã tương tác bài: {pid}")
@@ -573,4 +590,5 @@ def index():
     return send_from_directory('.', 'index.html')
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+    port = int(os.environ.get('PORT', 8080))
+    app.run(host='0.0.0.0', port=port)
