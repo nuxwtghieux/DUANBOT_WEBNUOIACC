@@ -404,6 +404,25 @@
             statusBox.className = 'proxy-status error';
             statusBox.textContent = 'Vui lòng nhập proxy để check!';
             return;
+        try {
+            const res = await fetch('/api/check_proxy', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ proxy })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                statusBox.className = 'proxy-status success';
+                statusBox.innerHTML = `✅ Live: ${data.ip} (${data.country} - ${data.timezone})`;
+            } else {
+                statusBox.className = 'proxy-status error';
+                statusBox.textContent = `❌ Die: ${data.error}`;
+            }
+        } catch (e) {
+            statusBox.className = 'proxy-status error';
+            statusBox.textContent = '❌ Lỗi kết nối server';
+        }
+    }
         }
 
         statusBox.className = 'proxy-status';
