@@ -2,7 +2,6 @@ import random
 import string
 import json
 import time
-import requests
 import uuid
 import base64
 import io
@@ -15,6 +14,9 @@ from flask_cors import CORS
 from Crypto.Cipher import AES, PKCS1_v1_5
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
+
+# THAY THẾ HOÀN TOÀN REQUESTS BẰNG CURL_CFFI ĐỂ GIẢ LẬP TLS VÂN TAY CHROME
+from curl_cffi import requests as cffi_requests
 
 # Tắt cảnh báo SSL
 import urllib3
@@ -60,16 +62,16 @@ def kiem_tra_proxy(p, timeout=12):
     proxies = tao_proxy(p)
     if not proxies: return False, "Proxy rỗng"
     try:
-        r = requests.get("https://api.ipify.org?format=json", proxies=proxies, timeout=timeout, verify=False)
+        # Dùng curl_cffi để check proxy
+        r = cffi_requests.get("https://api.ipify.org?format=json", proxies=proxies, timeout=timeout, impersonate="chrome", verify=False)
         if r.status_code == 200: return True, r.json().get("ip", "?")
         return False, f"HTTP {r.status_code}"
     except Exception as e: return False, str(e)
 
-# Hàm tự động lấy Quốc gia, Múi giờ từ IP Proxy
 def get_ip_info(proxies=None):
     try:
-        # Gọi API lấy thông tin IP (dựa vào IP của proxy)
-        r = requests.get("http://ip-api.com/json", proxies=proxies, timeout=10, verify=False)
+        # Dùng curl_cffi để lấy thông tin IP
+        r = cffi_requests.get("http://ip-api.com/json", proxies=proxies, timeout=10, impersonate="chrome", verify=False)
         if r.status_code == 200:
             data = r.json()
             return {
@@ -83,7 +85,7 @@ def get_ip_info(proxies=None):
 
 
 # ==========================================================
-# PHẦN 2: CODE LOGIN FB (TỐI ƯU ẨN MÔI TRƯỜNG TUYỆT ĐỐI)
+# PHẦN 2: CODE LOGIN FB (CURL_CFFI Bypass)
 # ==========================================================
 
 class FacebookPasswordEncryptor:
@@ -96,10 +98,9 @@ class FacebookPasswordEncryptor:
                 'fb_api_req_friendly_name': 'pwdKeyFetch', 'fb_api_caller_class': 'com.facebook.auth.login.AuthOperations',
                 'access_token': '438142079694454|fc0a7caa49b192f64f6f5a6d9643bb28'
             }
-            response = requests.post(url, params=params, proxies=proxies, timeout=15, verify=False).json()
+            response = cffi_requests.post(url, params=params, proxies=proxies, timeout=15, impersonate="chrome", verify=False).json()
             return response.get('public_key'), str(response.get('key_id', '25'))
         except Exception as e:
-            print(f"[Encrypt] Lỗi lấy Public Key: {e}")
             return None, "25"
 
     @staticmethod
@@ -171,9 +172,9 @@ class FacebookLogin:
         self.twofactor_code = twofactor_code
         self.proxies = proxies
 
-        # TỰ ĐỘNG LẤY THÔNG TIN IP PROXY ĐỂ ĐỒNG BỘ
+        # ĐỒNG BỘ MÔI TRƯỜNG THEO IP
         self.ip_info = get_ip_info(proxies)
-        print(f"[*] Thiết lập môi trường giả lập theo IP: {self.ip_info['country_code']} | {self.ip_info['lang']}")
+        print(f"[*] Đồng bộ môi trường: {self.ip_info['country_code']} | {self.ip_info['lang']} | {self.ip_info['timezone']}")
 
         if password.startswith("#PWD_FB4A"):
             self.password = password
@@ -182,7 +183,8 @@ class FacebookLogin:
 
         self.convert_token_to = FacebookAppTokens.get_all_app_keys() if convert_all_tokens else []
         
-        self.session = requests.Session()
+        # SỬ DỤNG SESSION CỦA CURL_CFFI (Giả lập Chrome)
+        self.session = cffi_requests.Session(impersonate="chrome")
         if self.proxies: self.session.proxies.update(self.proxies)
 
         # RANDOM THIẾT BỊ
@@ -190,11 +192,10 @@ class FacebookLogin:
             {"model": "SM-G998B", "brand": "samsung", "os": "13", "build": "TP1A.220624.014", "density": "3.0", "width": "1440", "height": "3200"},
             {"model": "M2101K7AG", "brand": "Xiaomi", "os": "12", "build": "SKQ1.211006.001", "density": "2.75", "width": "1080", "height": "2400"},
             {"model": "CPH2451", "brand": "OPPO", "os": "13", "build": "TP1A.220905.001", "density": "2.75", "width": "1080", "height": "2412"},
-            {"model": "Pixel 7", "brand": "google", "os": "14", "build": "UQ1A.231205.015", "density": "2.625", "width": "1080", "height": "2400"},
-            {"model": "V2207", "brand": "vivo", "os": "13", "build": "TP1A.220624.014", "density": "2.75", "width": "1080", "height": "2400"}
+            {"model": "Pixel 7", "brand": "google", "os": "14", "build": "UQ1A.231205.015", "density": "2.625", "width": "1080", "height": "2400"}
         ]
         self.device = random.choice(self.device_models)
-        self.fb_ver = random.choice(["430.0.0.35.114", "435.0.0.34.112", "440.0.0.32.110", "450.0.0.44.110"])
+        self.fb_ver = random.choice(["430.0.0.35.114", "435.0.0.34.112", "440.0.0.32.110"])
         
         self.device_id = str(uuid.uuid4())
         self.adid = str(uuid.uuid4())
@@ -244,9 +245,9 @@ class FacebookLogin:
         try:
             app_id = FacebookAppTokens.get_app_id(target_app)
             if not app_id: return None
-            response = requests.post('https://api.facebook.com/method/auth.getSessionforApp', data={
+            response = cffi_requests.post('https://api.facebook.com/method/auth.getSessionforApp', data={
                 'access_token': access_token, 'format': 'json', 'new_app_id': app_id, 'generate_session_cookies': '1'
-            }, proxies=self.proxies, timeout=15, verify=False)
+            }, proxies=self.proxies, timeout=15, impersonate="chrome", verify=False)
             result = response.json()
             if 'access_token' in result:
                 token = result['access_token']
@@ -324,7 +325,7 @@ class FacebookLogin:
 
 
 # ==========================================================
-# PHẦN 3: CODE NUÔI ACC (Giữ nguyên)
+# PHẦN 3: CODE NUÔI ACC (SỬ DỤNG CURL_CFFI)
 # ==========================================================
 
 class FacebookAIBot:
@@ -339,7 +340,7 @@ class FacebookAIBot:
         payload = {"model": self.model, "messages": [{"role": "user", "content": prompt}], "temperature": 0.9, "max_tokens": 200}
         for attempt in range(3):
             try:
-                res = requests.post(self.api_url, headers=headers, json=payload, timeout=20, proxies=self.proxies, verify=False)
+                res = cffi_requests.post(self.api_url, headers=headers, json=payload, timeout=20, proxies=self.proxies, impersonate="chrome", verify=False)
                 if res.status_code == 200: return res.json()["choices"][0]["message"]["content"].strip()
                 elif res.status_code == 429: time.sleep(15)
                 else: break
@@ -375,8 +376,10 @@ class FacebookAIBot:
         ket_qua = self._goi_ai(prompt)
         return ket_qua if ket_qua else f"Hôm nay thật tuyệt! #teungheui_bot09"
 
+
 def tao_phien(c_dict, proxies=None):
-    s = requests.Session()
+    # Dùng curl_cffi session giả lập Chrome
+    s = cffi_requests.Session(impersonate="chrome")
     s.headers.update({"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.9"})
     for k, v in c_dict.items(): s.cookies.set(k, v, domain=".facebook.com")
     if proxies: s.proxies.update(proxies)
@@ -433,7 +436,7 @@ def get_feed_posts(session, uid, fb_dtsg, jazoest, lsd, proxies=None):
 def graph_dang_bai(caption_text, token, proxies=None):
     url = "https://graph.facebook.com/v26.0/me/feed"
     try:
-        res = requests.post(url, data={"caption": caption_text, "access_token": token}, timeout=15, proxies=proxies, verify=False)
+        res = cffi_requests.post(url, data={"caption": caption_text, "access_token": token}, timeout=15, proxies=proxies, impersonate="chrome", verify=False)
         js = res.json()
         if "id" in js: return js["id"] 
         else: return None
@@ -441,12 +444,12 @@ def graph_dang_bai(caption_text, token, proxies=None):
 
 def graph_tha_cam_xuc(full_post_id, reaction_type, token, proxies=None):
     url = f"https://graph.facebook.com/v26.0/{full_post_id}/reactions"
-    try: return requests.post(url, data={"type": reaction_type, "access_token": token}, timeout=15, proxies=proxies, verify=False).status_code == 200
+    try: return cffi_requests.post(url, data={"type": reaction_type, "access_token": token}, timeout=15, proxies=proxies, impersonate="chrome", verify=False).status_code == 200
     except: return False
 
 def graph_comment(full_post_id, message, token, proxies=None):
     url = f"https://graph.facebook.com/v26.0/{full_post_id}/comments"
-    try: return requests.post(url, data={"message": message, "access_token": token}, timeout=15, proxies=proxies, verify=False).status_code == 200
+    try: return cffi_requests.post(url, data={"message": message, "access_token": token}, timeout=15, proxies=proxies, impersonate="chrome", verify=False).status_code == 200
     except: return False
 
 # ==========================================================
