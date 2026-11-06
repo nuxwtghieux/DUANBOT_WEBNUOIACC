@@ -17,15 +17,20 @@
         }
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: var(--bg-body); color: var(--text-dark); overflow: hidden; height: 100vh; width: 100vw; position: relative; }
+        
         #app-container { height: 100%; width: 100%; display: flex; flex-direction: column; position: relative; }
+        
+        /* Nội dung trang có padding-bottom lớn để không bị thanh nav che khuất */
         .page { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 50px 20px 120px 20px; display: none; }
         .page.active { display: block; animation: fadeIn 0.4s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
         .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
         .header-left h1 { font-size: 28px; font-weight: 900; color: #0F172A; letter-spacing: -0.5px; }
         .header-left p { font-size: 13px; color: var(--text-gray); margin-top: 2px; }
         .online-badge { display: flex; align-items: center; gap: 6px; background: var(--green-bg); color: var(--green-success); padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; }
         .online-badge::before { content: ''; width: 6px; height: 6px; background: var(--green-success); border-radius: 50%; }
+        
         .main-card { background: var(--bg-card); border-radius: 24px; padding: 24px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03); margin-bottom: 24px; }
         .greeting h2 { font-size: 26px; font-weight: 800; color: var(--text-dark); display: flex; align-items: center; gap: 8px; }
         .greeting p { font-size: 14px; color: var(--text-gray); margin-top: 4px; margin-bottom: 24px; }
@@ -34,12 +39,14 @@
         .user-details h3 { font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
         .user-details p { font-size: 13px; color: var(--text-gray); margin: 4px 0 8px 0; }
         .status-badge { display: inline-block; background: var(--green-bg); color: var(--green-success); padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        
         .divider { height: 1px; background: #F0F3F9; margin-bottom: 20px; }
         .data-title { font-size: 12px; font-weight: 700; color: var(--text-gray); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
         .stats-row { display: flex; gap: 12px; }
         .stat-box { flex: 1; background: #F8F9FE; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
         .stat-box-title { font-size: 12px; color: var(--text-gray); display: flex; align-items: center; gap: 6px; }
         .stat-box-value { display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 800; color: var(--text-dark); }
+        
         .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
         .section-title { font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
         .section-title::before { content: ''; width: 4px; height: 16px; background: var(--primary-blue); border-radius: 4px; }
@@ -49,10 +56,12 @@
         .quick-icon-wrapper { width: 44px; height: 44px; background: #F3F5FD; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #5A6A8A; flex-shrink: 0; }
         .quick-text h4 { font-size: 14px; font-weight: 800; color: var(--text-dark); margin-bottom: 2px; }
         .quick-text p { font-size: 10px; color: var(--text-gray); line-height: 1.3; }
+        
         .header-utility { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
         .header-utility h2 { font-size: 24px; font-weight: 800; }
         .menu-btn { width: 40px; height: 40px; background: var(--bg-card); border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
         .menu-btn svg { width: 24px; height: 24px; stroke: var(--text-dark); }
+        
         .utility-menu { background: var(--bg-card); border-radius: 20px; padding: 8px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.08); display: none; flex-direction: column; margin-bottom: 20px; animation: fadeIn 0.2s ease; position: relative; z-index: 10; overflow: hidden; }
         .utility-menu.show { display: flex; }
         .utility-menu-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; transition: background 0.2s; font-weight: 600; font-size: 14px; color: var(--text-dark); }
@@ -62,42 +71,68 @@
         .utility-menu-item.add-fb { color: #1FA368; font-weight: 700; }
         .utility-menu-item.add-fb svg { stroke: #1FA368; }
         .menu-divider { height: 1px; background-color: #E2E8F0; margin: 0 16px; }
+        
         .utility-view { display: none; animation: fadeIn 0.3s ease; }
         .utility-view.active { display: block; }
         .search-bar { width: 100%; background: var(--bg-card); border: 1px solid #E2E8F0; padding: 14px 16px; border-radius: 16px; font-size: 14px; margin-bottom: 24px; outline: none; transition: border 0.2s; }
         .search-bar:focus { border-color: var(--primary-blue); }
+        
         .account-item { background: var(--bg-card); border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 12px; }
         .account-top { display: flex; justify-content: space-between; align-items: flex-start; }
         .account-info h4 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
         .account-info p { font-size: 12px; color: var(--text-gray); }
         .account-status { display: inline-block; background: var(--green-bg); color: var(--green-success); padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; margin-top: 6px; }
+        
         .account-actions { display: flex; gap: 8px; align-items: center; }
         .btn-start { background: #E6F9F2; color: #1FA368; border: none; padding: 8px 16px; border-radius: 10px; font-weight: 700; font-size: 12px; cursor: pointer; }
         .btn-start:active { background: #CDEEDF; }
         .btn-delete { background: #FFF0F0; color: #FF4D4F; border: none; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        
         .log-container { background: #1A2035; border-radius: 12px; padding: 12px; margin-top: 4px; display: none; font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #A1B4FF; max-height: 200px; overflow-y: auto; border: 1px solid #2A3B5C; }
         .log-container.show { display: block; animation: fadeIn 0.3s ease; }
         .log-line { margin-bottom: 4px; line-height: 1.4; }
         .log-time { color: #65DDB0; margin-right: 6px; }
+        
         .token-item { background: var(--bg-card); border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 10px; }
         .token-header { display: flex; justify-content: space-between; align-items: center; }
         .token-header h4 { font-size: 14px; font-weight: 700; }
         .btn-get-token { background: var(--primary-blue); color: #FFF; border: none; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
         .token-result { background: #0D1530; border: 1px solid #34415F; padding: 12px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #F2F5FF; word-break: break-all; display: none; line-height: 1.5; }
         .token-result.show { display: block; animation: fadeIn 0.2s ease; }
+        
         .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 500; display: flex; justify-content: center; align-items: center; padding: 20px; opacity: 0; visibility: hidden; transition: 0.3s; }
         .modal-overlay.show { opacity: 1; visibility: visible; }
-        .modal-content { background: var(--bg-card); width: 100%; max-width: 400px; border-radius: 24px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); transform: translateY(20px); transition: 0.3s; }
+        .modal-content { background: var(--bg-card); width: 100%; max-width: 400px; border-radius: 24px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); transform: translateY(20px); transition: 0.3s; max-height: 90vh; overflow-y: auto;}
         .modal-overlay.show .modal-content { transform: translateY(0); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .modal-header h3 { font-size: 20px; font-weight: 800; }
         .close-modal { cursor: pointer; color: var(--text-gray); }
         .btn-submit { width: 100%; background: var(--primary-blue); color: #FFF; border: none; padding: 14px; border-radius: 14px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 15px rgba(86, 118, 255, 0.3); }
-        .input-group { margin-bottom: 20px; }
+        .input-group { margin-bottom: 16px; }
         .input-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-dark); margin-bottom: 8px; }
         .input-group input { width: 100%; background: #F8F9FE; border: 1px solid #E2E8F0; padding: 14px 16px; border-radius: 14px; font-size: 14px; outline: none; transition: border 0.2s; }
         .input-group input:focus { border-color: var(--primary-blue); background: #FFFFFF; }
-        .bottom-nav-container { position: absolute; bottom: 20px; left: 20px; right: 20px; height: var(--nav-height); z-index: 100; }
+
+        /* KHU VỰC CHECK PROXY */
+        .proxy-row { display: flex; gap: 8px; }
+        .proxy-row input { flex: 1; }
+        .btn-check-proxy { background: #F0F4FF; color: var(--primary-blue); border: 1px solid #D0DDFF; padding: 0 16px; border-radius: 14px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: 0.2s; }
+        .btn-check-proxy:active { background: #E0E7FF; }
+        .proxy-status { font-size: 12px; margin-top: 6px; display: none; }
+        .proxy-status.success { display: block; color: #1FA368; }
+        .proxy-status.error { display: block; color: #FF4D4F; }
+
+        /* ================= BOTTOM NAVIGATION (FIXED Ở ĐÁY) ================= */
+        .bottom-nav-container { 
+            position: fixed; 
+            bottom: 20px; /* Hạ thấp xuống một chút so với trước */
+            left: 50%;
+            transform: translateX(-50%); /* Căn giữa màn hình */
+            width: calc(100% - 40px); /* Cách 2 bên 20px */
+            max-width: 500px; 
+            height: var(--nav-height); 
+            z-index: 9999; /* Luôn nổi lên trên cùng */
+        }
         .bottom-nav { background: #FFFFFF; border-radius: 35px; height: 100%; display: flex; justify-content: space-around; align-items: center; padding: 0 5px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08); position: relative; overflow: visible; }
         .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-gray); font-size: 10px; font-weight: 600; cursor: pointer; width: 33.33%; height: 100%; position: relative; }
         .nav-content { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transform: translateY(0) scale(1); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); position: relative; width: 100%; height: 100%; }
@@ -110,6 +145,7 @@
         .nav-item.active svg { stroke: var(--primary-blue); transform: scale(1.05); }
         .nav-item.active .icon-bg { transform: translate(-50%, -50%) scale(1); }
         .nav-item.active span { font-weight: 800; }
+
     </style>
 </head>
 <body>
@@ -245,6 +281,7 @@
             </div>
         </div>
 
+        <!-- BOTTOM NAVIGATION -->
         <div class="bottom-nav-container">
             <div class="bottom-nav">
                 <div class="nav-item" onclick="switchTab('utility')" id="nav-utility">
@@ -279,6 +316,7 @@
     </div>
 </div>
 
+<!-- MODAL THÊM TÀI KHOẢN (Đã thêm Proxy) -->
 <div class="modal-overlay" id="add-account-modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -297,6 +335,17 @@
             <label>2FA (Bỏ trống nếu không có)</label>
             <input type="text" id="input-2fa" placeholder="Mã 6 số...">
         </div>
+        
+        <!-- Ô NHẬP PROXY VÀ CHECK LIVE/DIE -->
+        <div class="input-group">
+            <label>Proxy (Bỏ trống nếu dùng IP mạng hiện tại)</label>
+            <div class="proxy-row">
+                <input type="text" id="input-proxy" placeholder="ip:port hoặc user:pass@ip:port">
+                <button class="btn-check-proxy" onclick="checkProxy()">Check Live</button>
+            </div>
+            <div class="proxy-status" id="proxy-status"></div>
+        </div>
+
         <button class="btn-submit" onclick="addAccount()">Lưu tài khoản</button>
     </div>
 </div>
@@ -339,22 +388,61 @@
     function openAddAccountModal() {
         document.getElementById('add-account-modal').classList.add('show');
         document.getElementById('utility-menu-dropdown').classList.remove('show');
+        document.getElementById('proxy-status').className = 'proxy-status'; // Reset status
     }
 
     function closeAddAccountModal() {
         document.getElementById('add-account-modal').classList.remove('show');
     }
 
+    // Hàm check proxy live/die
+    async function checkProxy() {
+        const proxy = document.getElementById('input-proxy').value;
+        const statusBox = document.getElementById('proxy-status');
+        
+        if (!proxy) {
+            statusBox.className = 'proxy-status error';
+            statusBox.textContent = 'Vui lòng nhập proxy để check!';
+            return;
+        }
+
+        statusBox.className = 'proxy-status';
+        statusBox.style.color = '#8B96A9';
+        statusBox.textContent = 'Đang kiểm tra...';
+        statusBox.style.display = 'block';
+
+        try {
+            const res = await fetch('/api/check_proxy', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ proxy })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                statusBox.className = 'proxy-status success';
+                statusBox.innerHTML = `✅ Live: ${data.ip} (${data.speed}s)`;
+            } else {
+                statusBox.className = 'proxy-status error';
+                statusBox.textContent = `❌ Die: ${data.error}`;
+            }
+        } catch (e) {
+            statusBox.className = 'proxy-status error';
+            statusBox.textContent = '❌ Lỗi kết nối server';
+        }
+    }
+
     async function addAccount() {
         const uid = document.getElementById('input-uid').value;
         const pass = document.getElementById('input-pass').value;
         const twofa = document.getElementById('input-2fa').value;
+        const proxy = document.getElementById('input-proxy').value;
+        
         if (!uid || !pass) return alert("Vui lòng nhập Tài khoản và Mật khẩu!");
         
         try {
             const res = await fetch('/api/add_account', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ uid, pass, twofa })
+                body: JSON.stringify({ uid, pass, twofa, proxy })
             });
             const data = await res.json();
             if (data.success) {
@@ -362,6 +450,7 @@
                 document.getElementById('input-uid').value = '';
                 document.getElementById('input-pass').value = '';
                 document.getElementById('input-2fa').value = '';
+                document.getElementById('input-proxy').value = '';
                 loadAccounts();
             } else alert("Lỗi: " + data.error);
         } catch (e) { alert("Không kết nối được server."); }
@@ -387,7 +476,7 @@
                     <div class="account-top">
                         <div class="account-info">
                             <h4>${acc.uid}</h4>
-                            <p>UID: ${acc.fb_uid || 'Chưa login'}</p>
+                            <p>UID: ${acc.fb_uid || 'Chưa login'} | Proxy: ${acc.proxy ? 'Có' : 'Không'}</p>
                             <span class="account-status">${acc.status}</span>
                         </div>
                         <button class="btn-delete" onclick="deleteAccount('${acc.id}')">
@@ -415,7 +504,7 @@
     async function getToken(accId) {
         const box = document.getElementById(`token-result-${accId}`);
         box.classList.add('show');
-        box.textContent = "Đang lấy token từ hệ thống...";
+        box.textContent = "Đang lấy token từ hệ thống (Không login lại)...";
 
         try {
             const res = await fetch('/api/get_token', {
@@ -445,10 +534,10 @@
     async function startBot(accId) {
         const logBox = document.getElementById(`log-${accId}`);
         logBox.classList.add('show');
-        logBox.innerHTML = '<div class="log-line">Đang khởi động Bot (Vui lòng đợi)...</div>';
+        logBox.innerHTML = '<div class="log-line">Đang kiểm tra session (Giữ nguyên đăng nhập)...</div>';
 
         try {
-            // Gọi API Login & Lấy Token trước khi chạy
+            // Bước 1: Chỉ login nếu chưa có token (Giữ session)
             const resLogin = await fetch('/api/login_and_get_token', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: accId })
@@ -460,9 +549,9 @@
                 return;
             }
             
-            logBox.innerHTML += `<div class="log-line" style="color:#65DDB0">Login thành công! Đang chạy Bot...</div>`;
+            logBox.innerHTML += `<div class="log-line" style="color:#65DDB0">Session OK! Đang chạy Bot...</div>`;
 
-            // Gọi API Start Bot
+            // Bước 2: Chạy Bot ngầm
             const resBot = await fetch('/api/start_bot', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: accId })
@@ -471,7 +560,7 @@
             if (!dataBot.success) {
                 logBox.innerHTML += `<div class="log-line" style="color:#FF6B6B">Lỗi Bot: ${dataBot.error}</div>`;
             }
-            loadAccounts(); // Load lại để cập nhật trạng thái UID
+            loadAccounts(); // Cập nhật lại UID/Trạng thái
             
         } catch (e) {
             logBox.innerHTML += `<div class="log-line" style="color:#FF6B6B">Không kết nối được server.</div>`;
