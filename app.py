@@ -22,7 +22,49 @@ CORS(app)
 DB_FILE = 'accounts.json'
 
 # ==========================================================
-# PHẦN 1: CODE TỪ FILE totk.py (Get Token & Login)
+# PHẦN 1: HÀM XỬ LÝ PROXY ĐA DẠNG (THEO CODE CỦA BẠN)
+# ==========================================================
+
+def phan_tich_proxy(p):
+    if not p or p.strip() == "": return None
+    p = p.strip()
+    scheme = "http"
+    if "://" in p:
+        scheme, p = p.split("://", 1)
+    user = pw = None
+    if "@" in p:
+        auth, hostport = p.rsplit("@", 1)
+        if ":" in auth: user, pw = auth.split(":", 1)
+        else: user = auth
+        p = hostport
+    parts = p.split(":")
+    if len(parts) == 2: ip, port = parts
+    elif len(parts) == 4: ip, port, user, pw = parts
+    elif len(parts) == 3: ip, port, user = parts; pw = ""
+    else: return {"scheme": scheme, "host": p, "port": "80", "user": user, "pass": pw}
+    return {"scheme": scheme, "host": ip, "port": port, "user": user, "pass": pw}
+
+def tao_proxy(p):
+    info = phan_tich_proxy(p)
+    if not info: return None
+    if info.get("user"): 
+        url = f"{info['scheme']}://{info['user']}:{info['pass'] or ''}@{info['host']}:{info['port']}"
+    else: 
+        url = f"{info['scheme']}://{info['host']}:{info['port']}"
+    return {"http": url, "https": url}
+
+def kiem_tra_proxy(p, timeout=12):
+    proxies = tao_proxy(p)
+    if not proxies: return False, "Proxy rỗng"
+    try:
+        r = requests.get("https://api.ipify.org?format=json", proxies=proxies, timeout=timeout)
+        if r.status_code == 200: return True, r.json().get("ip", "?")
+        return False, f"HTTP {r.status_code}"
+    except Exception as e: return False, str(e)
+
+
+# ==========================================================
+# PHẦN 2: CODE TỪ FILE totk.py (Get Token & Login)
 # ==========================================================
 
 class FacebookPasswordEncryptor:
@@ -45,7 +87,7 @@ class FacebookPasswordEncryptor:
         if public_key is None:
             public_key, key_id = FacebookPasswordEncryptor.get_public_key(proxies)
         if not public_key:
-            return password # Trả về pass gốc nếu không lấy được key
+            return password
 
         try:
             rand_key = get_random_bytes(32)
@@ -251,7 +293,7 @@ class FacebookLogin:
 
 
 # ==========================================================
-# PHẦN 2: CODE TỪ FILE nuoiacc.py (Nuôi Acc)
+# PHẦN 3: CODE TỪ FILE nuoiacc.py (Nuôi Acc)
 # ==========================================================
 
 class FacebookAIBot:
@@ -377,7 +419,7 @@ def graph_comment(full_post_id, message, token, proxies=None):
     except: return False
 
 # ==========================================================
-# PHẦN 3: API CHO FLASK VÀ QUẢN LÝ DỮ LIỆU
+# PHẦN 4: API CHO FLASK VÀ QUẢN LÝ DỮ LIỆU
 # ==========================================================
 
 def load_db():
@@ -389,17 +431,6 @@ def load_db():
 def save_db(data):
     with open(DB_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-
-def parse_proxy(proxy_str):
-    if not proxy_str or proxy_str.strip() == "": return None
-    p = proxy_str.strip()
-    if "://" in p: return {"http": p, "https": p}
-    parts = p.split(":")
-    if len(parts) == 4:
-        return {"http": f"http://{parts[2]}:{parts[3]}@{parts[0]}:{parts[1]}", "https": f"http://{parts[2]}:{parts[3]}@{parts[0]}:{parts[1]}"}
-    elif len(parts) == 2:
-        return {"http": f"http://{p}", "https": f"http://{p}"}
-    return None
 
 @app.route('/api/get_accounts', methods=['GET'])
 def get_accounts():
@@ -425,29 +456,24 @@ def add_account():
         'proxy': proxy,
         'fb_uid': None,
         'status': 'Mới thêm',
-        'token_data': None # Nơi lưu token để giữ session
+        'token_data': None
     }
     accounts.append(new_acc)
     save_db(accounts)
     return jsonify({'success': True})
 
+# API CHECK PROXY SỬ DỤNG HÀM kiem_tra_proxy
 @app.route('/api/check_proxy', methods=['POST'])
-def check_proxy():
+def api_check_proxy():
     data = request.json
     proxy_str = data.get('proxy')
-    proxies = parse_proxy(proxy_str)
-    if not proxies: return jsonify({'success': False, 'error': 'Sai định dạng Proxy'})
+    if not proxy_str: return jsonify({'success': False, 'error': 'Proxy rỗng'})
     
-    try:
-        start_time = time.time()
-        res = requests.get("https://api.ipify.org?format=json", proxies=proxies, timeout=10)
-        if res.status_code == 200:
-            ip = res.json().get('ip')
-            speed = round(time.time() - start_time, 2)
-            return jsonify({'success': True, 'ip': ip, 'speed': speed})
-        return jsonify({'success': False, 'error': 'Proxy phản hồi lỗi'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': 'Proxy Die hoặc Timeout'})
+    is_live, result = kiem_tra_proxy(proxy_str)
+    if is_live:
+        return jsonify({'success': True, 'ip': result, 'speed': 1}) # Fake speed
+    else:
+        return jsonify({'success': False, 'error': result})
 
 @app.route('/api/delete_account/<acc_id>', methods=['DELETE'])
 def delete_account(acc_id):
@@ -456,7 +482,6 @@ def delete_account(acc_id):
     save_db(accounts)
     return jsonify({'success': True})
 
-# API LOGIN & LẤY TOKEN (Chỉ chạy 1 lần đầu)
 @app.route('/api/login_and_get_token', methods=['POST'])
 def api_login_and_get_token():
     data = request.json
@@ -468,11 +493,11 @@ def api_login_and_get_token():
     if not acc:
         return jsonify({'success': False, 'error': 'Không tìm thấy tài khoản'})
 
-    # NẾU ĐÃ CÓ TOKEN THÌ KHÔNG LOGIN LẠI (GIỮ SESSION)
+    # GIỮ SESSION: Nếu đã có token_data thì không login lại
     if acc.get('token_data'):
-        return jsonify({'success': True, 'message': 'Đã có session, không cần login lại'})
+        return jsonify({'success': True, 'message': 'Đã có session, giữ nguyên đăng nhập'})
 
-    proxies = parse_proxy(acc.get('proxy'))
+    proxies = tao_proxy(acc.get('proxy'))
     try:
         fb = FacebookLogin(
             uid_phone_mail=acc['uid'], 
@@ -496,7 +521,6 @@ def api_login_and_get_token():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
-# API GET TOKEN (Chỉ in ra, không login)
 @app.route('/api/get_token', methods=['POST'])
 def api_get_token():
     data = request.json
@@ -524,10 +548,10 @@ def start_bot():
     token_eaaa = token_data['original_token']['access_token']
     cookie_dict = token_data['cookies']['dict']
     uid = cookie_dict.get("c_user", "0")
-    proxies = parse_proxy(acc.get('proxy'))
+    proxies = tao_proxy(acc.get('proxy'))
 
     def run_bot():
-        print(f"\n[{acc['uid']}] Bắt đầu nuôi acc (Dùng Session có sẵn)...")
+        print(f"\n[{acc['uid']}] Bắt đầu nuôi acc (Giữ nguyên session)...")
         session = tao_phien(cookie_dict, proxies=proxies)
         meta = lay_metadata(session, proxies=proxies)
         fb_dtsg, lsd = meta.get("fb_dtsg"), meta.get("lsd")
