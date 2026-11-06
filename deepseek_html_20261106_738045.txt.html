@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>SNOW PANEL</title>
+    <style>
+        :root {
+            --bg-body: #F3F6FC;
+            --bg-card: #FFFFFF;
+            --primary-blue: #5676FF;
+            --text-dark: #1A2035;
+            --text-gray: #8B96A9;
+            --green-success: #2DC988;
+            --green-bg: #E6F9F2;
+            --nav-height: 70px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: var(--bg-body); color: var(--text-dark); overflow: hidden; height: 100vh; width: 100vw; position: relative; }
+        #app-container { height: 100%; width: 100%; display: flex; flex-direction: column; position: relative; }
+        .page { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 50px 20px 120px 20px; display: none; }
+        .page.active { display: block; animation: fadeIn 0.4s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .header-left h1 { font-size: 28px; font-weight: 900; color: #0F172A; letter-spacing: -0.5px; }
+        .header-left p { font-size: 13px; color: var(--text-gray); margin-top: 2px; }
+        .online-badge { display: flex; align-items: center; gap: 6px; background: var(--green-bg); color: var(--green-success); padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+        .online-badge::before { content: ''; width: 6px; height: 6px; background: var(--green-success); border-radius: 50%; }
+        .main-card { background: var(--bg-card); border-radius: 24px; padding: 24px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03); margin-bottom: 24px; }
+        .greeting h2 { font-size: 26px; font-weight: 800; color: var(--text-dark); display: flex; align-items: center; gap: 8px; }
+        .greeting p { font-size: 14px; color: var(--text-gray); margin-top: 4px; margin-bottom: 24px; }
+        .user-info { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+        .avatar { width: 70px; height: 70px; background: #E8EEFF; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #89A4FF; flex-shrink: 0; }
+        .user-details h3 { font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+        .user-details p { font-size: 13px; color: var(--text-gray); margin: 4px 0 8px 0; }
+        .status-badge { display: inline-block; background: var(--green-bg); color: var(--green-success); padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .divider { height: 1px; background: #F0F3F9; margin-bottom: 20px; }
+        .data-title { font-size: 12px; font-weight: 700; color: var(--text-gray); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+        .stats-row { display: flex; gap: 12px; }
+        .stat-box { flex: 1; background: #F8F9FE; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+        .stat-box-title { font-size: 12px; color: var(--text-gray); display: flex; align-items: center; gap: 6px; }
+        .stat-box-value { display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 800; color: var(--text-dark); }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .section-title { font-size: 18px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+        .section-title::before { content: ''; width: 4px; height: 16px; background: var(--primary-blue); border-radius: 4px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .quick-card { background: var(--bg-card); border-radius: 20px; padding: 16px 14px; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); cursor: pointer; transition: transform 0.2s; }
+        .quick-card:active { transform: scale(0.97); }
+        .quick-icon-wrapper { width: 44px; height: 44px; background: #F3F5FD; border-radius: 14px; display: flex; align-items: center; justify-content: center; color: #5A6A8A; flex-shrink: 0; }
+        .quick-text h4 { font-size: 14px; font-weight: 800; color: var(--text-dark); margin-bottom: 2px; }
+        .quick-text p { font-size: 10px; color: var(--text-gray); line-height: 1.3; }
+        .header-utility { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .header-utility h2 { font-size: 24px; font-weight: 800; }
+        .menu-btn { width: 40px; height: 40px; background: var(--bg-card); border-radius: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.03); }
+        .menu-btn svg { width: 24px; height: 24px; stroke: var(--text-dark); }
+        .utility-menu { background: var(--bg-card); border-radius: 20px; padding: 8px 0; box-shadow: 0 10px 30px rgba(0,0,0,0.08); display: none; flex-direction: column; margin-bottom: 20px; animation: fadeIn 0.2s ease; position: relative; z-index: 10; overflow: hidden; }
+        .utility-menu.show { display: flex; }
+        .utility-menu-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; transition: background 0.2s; font-weight: 600; font-size: 14px; color: var(--text-dark); }
+        .utility-menu-item:active { background: var(--bg-body); }
+        .utility-menu-item.active { background: #F3F5FD; color: var(--primary-blue); }
+        .utility-menu-item svg { width: 20px; height: 20px; stroke: var(--primary-blue); }
+        .utility-menu-item.add-fb { color: #1FA368; font-weight: 700; }
+        .utility-menu-item.add-fb svg { stroke: #1FA368; }
+        .menu-divider { height: 1px; background-color: #E2E8F0; margin: 0 16px; }
+        .utility-view { display: none; animation: fadeIn 0.3s ease; }
+        .utility-view.active { display: block; }
+        .search-bar { width: 100%; background: var(--bg-card); border: 1px solid #E2E8F0; padding: 14px 16px; border-radius: 16px; font-size: 14px; margin-bottom: 24px; outline: none; transition: border 0.2s; }
+        .search-bar:focus { border-color: var(--primary-blue); }
+        .account-item { background: var(--bg-card); border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 12px; }
+        .account-top { display: flex; justify-content: space-between; align-items: flex-start; }
+        .account-info h4 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+        .account-info p { font-size: 12px; color: var(--text-gray); }
+        .account-status { display: inline-block; background: var(--green-bg); color: var(--green-success); padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; margin-top: 6px; }
+        .account-actions { display: flex; gap: 8px; align-items: center; }
+        .btn-start { background: #E6F9F2; color: #1FA368; border: none; padding: 8px 16px; border-radius: 10px; font-weight: 700; font-size: 12px; cursor: pointer; }
+        .btn-start:active { background: #CDEEDF; }
+        .btn-delete { background: #FFF0F0; color: #FF4D4F; border: none; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .log-container { background: #1A2035; border-radius: 12px; padding: 12px; margin-top: 4px; display: none; font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #A1B4FF; max-height: 200px; overflow-y: auto; border: 1px solid #2A3B5C; }
+        .log-container.show { display: block; animation: fadeIn 0.3s ease; }
+        .log-line { margin-bottom: 4px; line-height: 1.4; }
+        .log-time { color: #65DDB0; margin-right: 6px; }
+        .token-item { background: var(--bg-card); border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.02); display: flex; flex-direction: column; gap: 10px; }
+        .token-header { display: flex; justify-content: space-between; align-items: center; }
+        .token-header h4 { font-size: 14px; font-weight: 700; }
+        .btn-get-token { background: var(--primary-blue); color: #FFF; border: none; padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
+        .token-result { background: #0D1530; border: 1px solid #34415F; padding: 12px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-size: 11px; color: #F2F5FF; word-break: break-all; display: none; line-height: 1.5; }
+        .token-result.show { display: block; animation: fadeIn 0.2s ease; }
+        .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 500; display: flex; justify-content: center; align-items: center; padding: 20px; opacity: 0; visibility: hidden; transition: 0.3s; }
+        .modal-overlay.show { opacity: 1; visibility: visible; }
+        .modal-content { background: var(--bg-card); width: 100%; max-width: 400px; border-radius: 24px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); transform: translateY(20px); transition: 0.3s; }
+        .modal-overlay.show .modal-content { transform: translateY(0); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header h3 { font-size: 20px; font-weight: 800; }
+        .close-modal { cursor: pointer; color: var(--text-gray); }
+        .btn-submit { width: 100%; background: var(--primary-blue); color: #FFF; border: none; padding: 14px; border-radius: 14px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 15px rgba(86, 118, 255, 0.3); }
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-dark); margin-bottom: 8px; }
+        .input-group input { width: 100%; background: #F8F9FE; border: 1px solid #E2E8F0; padding: 14px 16px; border-radius: 14px; font-size: 14px; outline: none; transition: border 0.2s; }
+        .input-group input:focus { border-color: var(--primary-blue); background: #FFFFFF; }
+        .bottom-nav-container { position: absolute; bottom: 20px; left: 20px; right: 20px; height: var(--nav-height); z-index: 100; }
+        .bottom-nav { background: #FFFFFF; border-radius: 35px; height: 100%; display: flex; justify-content: space-around; align-items: center; padding: 0 5px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08); position: relative; overflow: visible; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-gray); font-size: 10px; font-weight: 600; cursor: pointer; width: 33.33%; height: 100%; position: relative; }
+        .nav-content { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transform: translateY(0) scale(1); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); position: relative; width: 100%; height: 100%; }
+        .icon-wrapper { position: relative; display: flex; justify-content: center; align-items: center; width: 100%; height: 24px; }
+        .nav-item svg { width: 22px; height: 22px; stroke: var(--text-gray); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: stroke 0.3s ease; z-index: 2; position: relative; }
+        .icon-bg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); width: 56px; height: 56px; background: #FFFFFF; border-radius: 50%; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); z-index: 1; }
+        .nav-item span { transition: all 0.3s ease; z-index: 2; position: relative; margin-top: 2px; }
+        .nav-item.active { color: var(--primary-blue); }
+        .nav-item.active .nav-content { transform: translateY(-12px) scale(1.05); }
+        .nav-item.active svg { stroke: var(--primary-blue); transform: scale(1.05); }
+        .nav-item.active .icon-bg { transform: translate(-50%, -50%) scale(1); }
+        .nav-item.active span { font-weight: 800; }
+    </style>
+</head>
+<body>
+
+<div id="main-app">
+    <div id="app-container">
+        
+        <div id="page-home" class="page active">
+            <div class="header">
+                <div class="header-left">
+                    <h1>SNOW PANEL</h1>
+                    <p>Quản lý tài khoản • Tối ưu hiệu quả</p>
+                </div>
+                <div class="online-badge">ONLINE</div>
+            </div>
+
+            <div class="main-card">
+                <div class="greeting">
+                    <h2>Xin chào! 👋</h2>
+                    <p>Chào mừng bạn trở lại với Snow Panel</p>
+                </div>
+                <div class="user-info">
+                    <div class="avatar">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+                    </div>
+                    <div class="user-details">
+                        <h3>Snow User <svg width="18" height="18" viewBox="0 0 24 24" fill="#1A2035"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></h3>
+                        <p>ID: 10000001</p>
+                        <span class="status-badge">● Đang hoạt động</span>
+                    </div>
+                </div>
+                <div class="divider"></div>
+                <div class="data-title">Dữ liệu hệ thống</div>
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="stat-box-title">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            Giờ online
+                        </div>
+                        <div class="stat-box-value" id="live-clock">00:00:00</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-box-title">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/></svg>
+                            Cấp bậc
+                        </div>
+                        <div class="stat-box-value">VIP 0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-header"><div class="section-title">Chức năng chính</div></div>
+            <div class="grid-2">
+                <div class="quick-card" onclick="switchTab('utility')">
+                    <div class="quick-icon-wrapper">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    </div>
+                    <div class="quick-text"><h4>Tiện ích</h4><p>Truy cập nhanh</p></div>
+                </div>
+                <div class="quick-card" onclick="switchTab('settings')">
+                    <div class="quick-icon-wrapper">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    </div>
+                    <div class="quick-text"><h4>Cài đặt</h4><p>Tùy chỉnh cá nhân</p></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-utility" class="page">
+            <div class="header-utility">
+                <h2 id="utility-title">Nuôi Acc</h2>
+                <div class="menu-btn" onclick="toggleUtilityMenu()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                </div>
+            </div>
+
+            <div class="utility-menu" id="utility-menu-dropdown">
+                <div class="utility-menu-item add-fb" onclick="openAddAccountModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Thêm tài khoản FB
+                </div>
+                <div class="menu-divider"></div>
+                <div class="utility-menu-item active" onclick="changeUtilityView('nuoi-acc', 'Nuôi Acc', this)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    Nuôi Acc
+                </div>
+                <div class="menu-divider"></div>
+                <div class="utility-menu-item" onclick="changeUtilityView('reg-page', 'Reg Page', this)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                    Reg Page
+                </div>
+                <div class="menu-divider"></div>
+                <div class="utility-menu-item" onclick="changeUtilityView('share-ao', 'Share Ảo', this)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+                    Share Ảo
+                </div>
+                <div class="menu-divider"></div>
+                <div class="utility-menu-item" onclick="changeUtilityView('get-token', 'Get Token', this)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>
+                    Get Token
+                </div>
+            </div>
+
+            <div id="utility-content-area">
+                <div id="view-nuoi-acc" class="utility-view active">
+                    <input type="text" class="search-bar" placeholder="Tìm kiếm tài khoản...">
+                    <div class="account-list" id="account-list-nuoi"></div>
+                </div>
+                <div id="view-reg-page" class="utility-view">
+                    <div style="text-align: center; padding: 40px 20px; color: var(--text-gray);">
+                        <h3>Coming Soon</h3>
+                    </div>
+                </div>
+                <div id="view-share-ao" class="utility-view">
+                    <p style="text-align: center; color: var(--text-gray); margin-top: 20px;">Giao diện đang được cập nhật...</p>
+                </div>
+                <div id="view-get-token" class="utility-view">
+                    <input type="text" class="search-bar" placeholder="Tìm kiếm tài khoản...">
+                    <div id="token-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="page-settings" class="page">
+            <div class="header" style="margin-bottom: 20px;"><div class="header-left"><h1>Cài đặt</h1></div></div>
+            <div class="settings-profile" style="background: var(--bg-card); border-radius: 24px; padding: 24px; display: flex; align-items: center; gap: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03); margin-bottom: 24px;">
+                <div class="avatar" style="width: 60px; height: 60px; background: #E8EEFF; color: #89A4FF;">
+                    <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+                </div>
+                <div class="settings-profile-info">
+                    <h3>Snow User</h3><p>ID: 10000001</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bottom-nav-container">
+            <div class="bottom-nav">
+                <div class="nav-item" onclick="switchTab('utility')" id="nav-utility">
+                    <div class="nav-content">
+                        <div class="icon-wrapper">
+                            <div class="icon-bg"></div>
+                            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        </div>
+                        <span>Tiện ích</span>
+                    </div>
+                </div>
+                <div class="nav-item home-btn active" onclick="switchTab('home')" id="nav-home">
+                    <div class="nav-content">
+                        <div class="icon-wrapper">
+                            <div class="icon-bg"></div>
+                            <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                        </div>
+                        <span>Trang chủ</span>
+                    </div>
+                </div>
+                <div class="nav-item" onclick="switchTab('settings')" id="nav-settings">
+                    <div class="nav-content">
+                        <div class="icon-wrapper">
+                            <div class="icon-bg"></div>
+                            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                        </div>
+                        <span>Cài đặt</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="add-account-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Thêm tài khoản FB</h3>
+            <div class="close-modal" onclick="closeAddAccountModal()">✕</div>
+        </div>
+        <div class="input-group">
+            <label>Tài khoản (Email/SĐT)</label>
+            <input type="text" id="input-uid" placeholder="Nhập email hoặc số điện thoại...">
+        </div>
+        <div class="input-group">
+            <label>Mật khẩu</label>
+            <input type="password" id="input-pass" placeholder="Nhập mật khẩu...">
+        </div>
+        <div class="input-group">
+            <label>2FA (Bỏ trống nếu không có)</label>
+            <input type="text" id="input-2fa" placeholder="Mã 6 số...">
+        </div>
+        <button class="btn-submit" onclick="addAccount()">Lưu tài khoản</button>
+    </div>
+</div>
+
+<script>
+    let accounts = [];
+    let uptimeSeconds = 0;
+    
+    function updateUptime() {
+        uptimeSeconds++;
+        const h = String(Math.floor(uptimeSeconds / 3600)).padStart(2, '0');
+        const m = String(Math.floor((uptimeSeconds % 3600) / 60)).padStart(2, '0');
+        const s = String(uptimeSeconds % 60).padStart(2, '0');
+        document.getElementById('live-clock').textContent = `${h}:${m}:${s}`;
+    }
+    setInterval(updateUptime, 1000);
+
+    function switchTab(tabId) {
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(`page-${tabId}`).classList.add('active');
+        document.getElementById(`nav-${tabId}`).classList.add('active');
+        document.getElementById(`page-${tabId}`).scrollTop = 0;
+        if(tabId !== 'utility') document.getElementById('utility-menu-dropdown').classList.remove('show');
+    }
+
+    function toggleUtilityMenu() {
+        document.getElementById('utility-menu-dropdown').classList.toggle('show');
+    }
+
+    function changeUtilityView(viewId, title, element) {
+        document.getElementById('utility-title').textContent = title;
+        document.querySelectorAll('.utility-view').forEach(v => v.classList.remove('active'));
+        document.getElementById(`view-${viewId}`).classList.add('active');
+        document.querySelectorAll('.utility-menu-item').forEach(i => i.classList.remove('active'));
+        element.classList.add('active');
+        document.getElementById('utility-menu-dropdown').classList.remove('show');
+    }
+
+    function openAddAccountModal() {
+        document.getElementById('add-account-modal').classList.add('show');
+        document.getElementById('utility-menu-dropdown').classList.remove('show');
+    }
+
+    function closeAddAccountModal() {
+        document.getElementById('add-account-modal').classList.remove('show');
+    }
+
+    async function addAccount() {
+        const uid = document.getElementById('input-uid').value;
+        const pass = document.getElementById('input-pass').value;
+        const twofa = document.getElementById('input-2fa').value;
+        if (!uid || !pass) return alert("Vui lòng nhập Tài khoản và Mật khẩu!");
+        
+        try {
+            const res = await fetch('/api/add_account', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ uid, pass, twofa })
+            });
+            const data = await res.json();
+            if (data.success) {
+                closeAddAccountModal();
+                document.getElementById('input-uid').value = '';
+                document.getElementById('input-pass').value = '';
+                document.getElementById('input-2fa').value = '';
+                loadAccounts();
+            } else alert("Lỗi: " + data.error);
+        } catch (e) { alert("Không kết nối được server."); }
+    }
+
+    async function loadAccounts() {
+        try {
+            const res = await fetch('/api/get_accounts');
+            accounts = await res.json();
+            renderAccounts();
+        } catch (e) { console.error(e); }
+    }
+
+    function renderAccounts() {
+        const listNuoi = document.getElementById('account-list-nuoi');
+        const listToken = document.getElementById('token-list');
+        listNuoi.innerHTML = '';
+        listToken.innerHTML = '';
+
+        accounts.forEach(acc => {
+            listNuoi.insertAdjacentHTML('beforeend', `
+                <div class="account-item" id="acc-${acc.id}">
+                    <div class="account-top">
+                        <div class="account-info">
+                            <h4>${acc.uid}</h4>
+                            <p>UID: ${acc.fb_uid || 'Chưa login'}</p>
+                            <span class="account-status">${acc.status}</span>
+                        </div>
+                        <button class="btn-delete" onclick="deleteAccount('${acc.id}')">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </div>
+                    <div class="account-actions">
+                        <button class="btn-start" onclick="startBot('${acc.id}')">Start</button>
+                    </div>
+                    <div class="log-container" id="log-${acc.id}"></div>
+                </div>
+            `);
+            listToken.insertAdjacentHTML('beforeend', `
+                <div class="token-item">
+                    <div class="token-header">
+                        <h4>${acc.uid}</h4>
+                        <button class="btn-get-token" onclick="getToken('${acc.id}')">Get</button>
+                    </div>
+                    <div class="token-result" id="token-result-${acc.id}"></div>
+                </div>
+            `);
+        });
+    }
+
+    async function getToken(accId) {
+        const box = document.getElementById(`token-result-${accId}`);
+        box.classList.add('show');
+        box.textContent = "Đang lấy token từ hệ thống...";
+
+        try {
+            const res = await fetch('/api/get_token', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: accId })
+            });
+            const data = await res.json();
+            
+            if (data.success) {
+                let html = `
+                    <div style="margin-bottom: 8px; color: #F2F5FF; font-weight: bold;">==================== TOKEN GỐC ====================</div>
+                    <div style="margin-bottom: 4px;"><span style="color: #65DDB0;">[+] Prefix:</span> ${data.original_token.token_prefix}</div>
+                    <div style="margin-bottom: 12px; word-break: break-all;"><span style="color: #65DDB0;">[+] EAAA Token:</span><br>${data.original_token.access_token}</div>
+                    <div style="margin-bottom: 8px; color: #F2F5FF; font-weight: bold;">==================== CONVERTED TOKENS ====================</div>
+                `;
+                for (const [app, t] of Object.entries(data.converted_tokens || {})) {
+                    html += `<div style="margin-bottom: 8px;"><span style="color: #829AFF;">[${app}]</span><br><span style="word-break: break-all;">${t.access_token}</span></div>`;
+                }
+                html += `<div style="margin-top: 12px; margin-bottom: 8px; color: #F2F5FF; font-weight: bold;">==================== COOKIES ====================</div><div style="word-break: break-all;">${data.cookies.string}</div>`;
+                box.innerHTML = html;
+            } else {
+                box.innerHTML = `<span style="color:#FF6B6B">Lỗi: ${data.error}</span>`;
+            }
+        } catch (e) { box.innerHTML = `<span style="color:#FF6B6B">Không kết nối được server.</span>`; }
+    }
+
+    async function startBot(accId) {
+        const logBox = document.getElementById(`log-${accId}`);
+        logBox.classList.add('show');
+        logBox.innerHTML = '<div class="log-line">Đang khởi động Bot (Vui lòng đợi)...</div>';
+
+        try {
+            // Gọi API Login & Lấy Token trước khi chạy
+            const resLogin = await fetch('/api/login_and_get_token', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: accId })
+            });
+            const dataLogin = await resLogin.json();
+            
+            if (!dataLogin.success) {
+                logBox.innerHTML += `<div class="log-line" style="color:#FF6B6B">Lỗi Login: ${dataLogin.error}</div>`;
+                return;
+            }
+            
+            logBox.innerHTML += `<div class="log-line" style="color:#65DDB0">Login thành công! Đang chạy Bot...</div>`;
+
+            // Gọi API Start Bot
+            const resBot = await fetch('/api/start_bot', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: accId })
+            });
+            const dataBot = await resBot.json();
+            if (!dataBot.success) {
+                logBox.innerHTML += `<div class="log-line" style="color:#FF6B6B">Lỗi Bot: ${dataBot.error}</div>`;
+            }
+            loadAccounts(); // Load lại để cập nhật trạng thái UID
+            
+        } catch (e) {
+            logBox.innerHTML += `<div class="log-line" style="color:#FF6B6B">Không kết nối được server.</div>`;
+        }
+    }
+
+    async function deleteAccount(accId) {
+        if(confirm("Bạn có chắc muốn xóa tài khoản này?")) {
+            await fetch(`/api/delete_account/${accId}`, { method: 'DELETE' });
+            loadAccounts();
+        }
+    }
+
+    window.onload = () => { loadAccounts(); };
+</script>
+</body>
+</html>
