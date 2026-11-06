@@ -16,15 +16,18 @@ from Crypto.Cipher import AES, PKCS1_v1_5
 from Crypto.PublicKey import RSA
 from Crypto.Random import get_random_bytes
 
+# Tắt cảnh báo SSL
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 app = Flask(__name__, static_folder='.')
 CORS(app)
 
 DB_FILE = 'accounts.json'
 
 # ==========================================================
-# PHẦN 1: HÀM XỬ LÝ PROXY ĐA DẠNG (THEO CODE CỦA BẠN)
+# PHẦN 1: HÀM XỬ LÝ PROXY & LẤY THÔNG TIN IP
 # ==========================================================
-
 def phan_tich_proxy(p):
     if not p or p.strip() == "": return None
     p = p.strip()
@@ -57,14 +60,30 @@ def kiem_tra_proxy(p, timeout=12):
     proxies = tao_proxy(p)
     if not proxies: return False, "Proxy rỗng"
     try:
-        r = requests.get("https://api.ipify.org?format=json", proxies=proxies, timeout=timeout)
+        r = requests.get("https://api.ipify.org?format=json", proxies=proxies, timeout=timeout, verify=False)
         if r.status_code == 200: return True, r.json().get("ip", "?")
         return False, f"HTTP {r.status_code}"
     except Exception as e: return False, str(e)
 
+# Hàm tự động lấy Quốc gia, Múi giờ từ IP Proxy
+def get_ip_info(proxies=None):
+    try:
+        # Gọi API lấy thông tin IP (dựa vào IP của proxy)
+        r = requests.get("http://ip-api.com/json", proxies=proxies, timeout=10, verify=False)
+        if r.status_code == 200:
+            data = r.json()
+            return {
+                "country_code": data.get("countryCode", "VN"),
+                "timezone": data.get("timezone", "Asia/Ho_Chi_Minh"),
+                "lang": "en_US" if data.get("countryCode") != "VN" else "vi_VN"
+            }
+    except:
+        pass
+    return {"country_code": "VN", "timezone": "Asia/Ho_Chi_Minh", "lang": "vi_VN"}
+
 
 # ==========================================================
-# PHẦN 2: CODE TỪ FILE totk.py (Get Token & Login)
+# PHẦN 2: CODE LOGIN FB (TỐI ƯU ẨN MÔI TRƯỜNG TUYỆT ĐỐI)
 # ==========================================================
 
 class FacebookPasswordEncryptor:
@@ -77,9 +96,10 @@ class FacebookPasswordEncryptor:
                 'fb_api_req_friendly_name': 'pwdKeyFetch', 'fb_api_caller_class': 'com.facebook.auth.login.AuthOperations',
                 'access_token': '438142079694454|fc0a7caa49b192f64f6f5a6d9643bb28'
             }
-            response = requests.post(url, params=params, proxies=proxies, timeout=15).json()
+            response = requests.post(url, params=params, proxies=proxies, timeout=15, verify=False).json()
             return response.get('public_key'), str(response.get('key_id', '25'))
-        except Exception:
+        except Exception as e:
+            print(f"[Encrypt] Lỗi lấy Public Key: {e}")
             return None, "25"
 
     @staticmethod
@@ -110,7 +130,7 @@ class FacebookPasswordEncryptor:
 
             encoded = base64.b64encode(buf.getvalue()).decode("utf-8")
             return f"#PWD_FB4A:2:{current_time}:{encoded}"
-        except Exception:
+        except Exception as e:
             return password
 
 class FacebookAppTokens:
@@ -139,24 +159,21 @@ class FacebookAppTokens:
                 return token[:i]
         return token
 
+
 class FacebookLogin:
     API_URL = "https://b-graph.facebook.com/auth/login"
     ACCESS_TOKEN = "350685531728|62f8ce9f74b12f84c123cc23437a4a32"
     API_KEY = "882a8490361da98702bf97a021ddc14d"
     SIG = "214049b9f17c38bd767de53752b53946"
 
-    BASE_HEADERS = {
-        "content-type": "application/x-www-form-urlencoded", "x-fb-net-hni": "45201", "zero-rated": "0",
-        "x-fb-sim-hni": "45201", "x-fb-connection-quality": "EXCELLENT", "x-fb-friendly-name": "authenticate",
-        "x-fb-connection-bandwidth": "78032897", "x-tigon-is-retry": "False", "authorization": "OAuth null",
-        "x-fb-connection-type": "WIFI", "x-fb-device-group": "3342", "priority": "u=3,i",
-        "x-fb-http-engine": "Liger", "x-fb-client-ip": "True", "x-fb-server-cluster": "True"
-    }
-
     def __init__(self, uid_phone_mail, password, machine_id=None, convert_all_tokens=False, twofactor_code=None, proxies=None):
         self.uid_phone_mail = uid_phone_mail
         self.twofactor_code = twofactor_code
         self.proxies = proxies
+
+        # TỰ ĐỘNG LẤY THÔNG TIN IP PROXY ĐỂ ĐỒNG BỘ
+        self.ip_info = get_ip_info(proxies)
+        print(f"[*] Thiết lập môi trường giả lập theo IP: {self.ip_info['country_code']} | {self.ip_info['lang']}")
 
         if password.startswith("#PWD_FB4A"):
             self.password = password
@@ -168,6 +185,17 @@ class FacebookLogin:
         self.session = requests.Session()
         if self.proxies: self.session.proxies.update(self.proxies)
 
+        # RANDOM THIẾT BỊ
+        self.device_models = [
+            {"model": "SM-G998B", "brand": "samsung", "os": "13", "build": "TP1A.220624.014", "density": "3.0", "width": "1440", "height": "3200"},
+            {"model": "M2101K7AG", "brand": "Xiaomi", "os": "12", "build": "SKQ1.211006.001", "density": "2.75", "width": "1080", "height": "2400"},
+            {"model": "CPH2451", "brand": "OPPO", "os": "13", "build": "TP1A.220905.001", "density": "2.75", "width": "1080", "height": "2412"},
+            {"model": "Pixel 7", "brand": "google", "os": "14", "build": "UQ1A.231205.015", "density": "2.625", "width": "1080", "height": "2400"},
+            {"model": "V2207", "brand": "vivo", "os": "13", "build": "TP1A.220624.014", "density": "2.75", "width": "1080", "height": "2400"}
+        ]
+        self.device = random.choice(self.device_models)
+        self.fb_ver = random.choice(["430.0.0.35.114", "435.0.0.34.112", "440.0.0.32.110", "450.0.0.44.110"])
+        
         self.device_id = str(uuid.uuid4())
         self.adid = str(uuid.uuid4())
         self.secure_family_device_id = str(uuid.uuid4())
@@ -183,22 +211,30 @@ class FacebookLogin:
         return ''.join(random.choices(string.ascii_letters + string.digits, k=24))
 
     def _build_headers(self):
-        headers = self.BASE_HEADERS.copy()
-        headers.update({
+        ua = f"Dalvik/2.1.0 (Linux; U; Android {self.device['os']}; {self.device['model']} Build/{self.device['build']}) [FBAN/FB4A;FBAV/{self.fb_ver};FBPN/com.facebook.katana;FBLC/{self.ip_info['lang']};FBBV/480086274;FBCR/MobiFone;FBMF/{self.device['brand']};FBBD/{self.device['brand']};FBDV/{self.device['model']};FBSV/{self.device['os']};FBCA/x86:armeabi-v7a;FBDM/{{density={self.device['density']},width={self.device['width']},height={self.device['height']}}};FB_FW/1;FBRV/0;]"
+        
+        return {
+            "content-type": "application/x-www-form-urlencoded",
+            "x-fb-net-hni": "45201", "zero-rated": "0", "x-fb-sim-hni": "45201",
+            "x-fb-connection-quality": "EXCELLENT", "x-fb-friendly-name": "authenticate",
+            "x-fb-connection-bandwidth": "78032897", "x-tigon-is-retry": "False",
+            "authorization": "OAuth null", "x-fb-connection-type": "WIFI",
+            "x-fb-device-group": "3342", "priority": "u=3,i",
+            "x-fb-http-engine": "Liger", "x-fb-client-ip": "True", "x-fb-server-cluster": "True",
             "x-fb-request-analytics-tags": '{"network_tags":{"product":"350685531728","retry_attempt":"0"},"application_tags":"unknown"}',
-            "user-agent": "Dalvik/2.1.0 (Linux; U; Android 9; 23113RKC6C Build/PQ3A.190705.08211809) [FBAN/FB4A;FBAV/417.0.0.33.65;FBPN/com.facebook.katana;FBLC/vi_VN;FBBV/480086274;FBCR/MobiFone;FBMF/Redmi;FBBD/Redmi;FBDV/23113RKC6C;FBSV/9;FBCA/x86:armeabi-v7a;FBDM/{density=1.5,width=1280,height=720};FB_FW/1;FBRV/0;]"
-        })
-        return headers
+            "user-agent": ua
+        }
 
     def _build_data(self):
         return {
             "format": "json", "email": self.uid_phone_mail, "password": self.password, "credentials_type": "password",
-            "generate_session_cookies": "1", "locale": "vi_VN", "client_country_code": "VN", "api_key": self.API_KEY,
-            "access_token": self.ACCESS_TOKEN, "adid": self.adid, "device_id": self.device_id, "generate_analytics_claim": "1",
-            "community_id": "", "linked_guest_account_userid": "", "cpl": "true", "try_num": "1", "family_device_id": self.device_id,
-            "secure_family_device_id": self.secure_family_device_id, "sim_serials": f'["{self.sim_serial}"]', "openid_flow": "android_login",
-            "openid_provider": "google", "openid_tokens": "[]", "account_switcher_uids": f'["{self.uid_phone_mail}"]',
-            "enroll_misauth": "false", "error_detail_type": "button_with_disabled", "source": "login", "machine_id": self.machine_id,
+            "generate_session_cookies": "1", "locale": self.ip_info['lang'], "client_country_code": self.ip_info['country_code'], 
+            "api_key": self.API_KEY, "access_token": self.ACCESS_TOKEN, "adid": self.adid, "device_id": self.device_id, 
+            "generate_analytics_claim": "1", "community_id": "", "linked_guest_account_userid": "", "cpl": "true", "try_num": "1", 
+            "family_device_id": self.device_id, "secure_family_device_id": self.secure_family_device_id, 
+            "sim_serials": f'["{self.sim_serial}"]', "openid_flow": "android_login", "openid_provider": "google", 
+            "openid_tokens": "[]", "account_switcher_uids": f'["{self.uid_phone_mail}"]', "enroll_misauth": "false", 
+            "error_detail_type": "button_with_disabled", "source": "login", "machine_id": self.machine_id,
             "jazoest": self.jazoest, "meta_inf_fbmeta": "V2_UNTAGGED", "advertiser_id": self.adid, "encrypted_msisdn": "",
             "currently_logged_in_userid": "0", "fb_api_req_friendly_name": "authenticate", "fb_api_caller_class": "Fb4aAuthHandler",
             "sig": self.SIG
@@ -210,7 +246,7 @@ class FacebookLogin:
             if not app_id: return None
             response = requests.post('https://api.facebook.com/method/auth.getSessionforApp', data={
                 'access_token': access_token, 'format': 'json', 'new_app_id': app_id, 'generate_session_cookies': '1'
-            }, proxies=self.proxies, timeout=15)
+            }, proxies=self.proxies, timeout=15, verify=False)
             result = response.json()
             if 'access_token' in result:
                 token = result['access_token']
@@ -229,18 +265,13 @@ class FacebookLogin:
         if not self.twofactor_code:
             return {'success': False, 'error': 'Tài khoản yêu cầu 2FA nhưng bạn chưa nhập mã.'}
         
-        data_2fa = {
-            "format": "json", "email": self.uid_phone_mail, "password": self.password, "credentials_type": "two_factor",
-            "generate_session_cookies": "1", "api_key": self.API_KEY, "access_token": self.ACCESS_TOKEN, "adid": self.adid, 
-            "device_id": self.device_id, "generate_analytics_claim": "1", "community_id": "", "cpl": "true", "try_num": "1",
-            "family_device_id": self.device_id, "secure_family_device_id": self.secure_family_device_id, "sim_serials": f'["{self.sim_serial}"]',
-            "machine_id": self.machine_id, "jazoest": self.jazoest, "meta_inf_fbmeta": "V2_UNTAGGED", "advertiser_id": self.adid,
-            "currently_logged_in_userid": "0", "fb_api_req_friendly_name": "authenticate", "fb_api_caller_class": "Fb4aAuthHandler",
-            "sig": self.SIG, "twofactor_code": self.twofactor_code, "first_factor": error_data.get('login_first_factor'),
-            "userid": error_data.get('uid')
-        }
+        data_2fa = self._build_data()
+        data_2fa.update({
+            "credentials_type": "two_factor", "twofactor_code": self.twofactor_code, 
+            "first_factor": error_data.get('login_first_factor'), "userid": error_data.get('uid')
+        })
         try:
-            res = self.session.post(self.API_URL, headers=self.headers, data=data_2fa).json()
+            res = self.session.post(self.API_URL, headers=self.headers, data=data_2fa, verify=False).json()
             if 'access_token' in res: return self._parse_success_response(res)
             return {'success': False, 'error': res.get('error', {}).get('message', 'Mã 2FA sai')}
         except Exception as e:
@@ -275,7 +306,7 @@ class FacebookLogin:
 
     def login(self):
         try:
-            response = self.session.post(self.API_URL, headers=self.headers, data=self.data)
+            response = self.session.post(self.API_URL, headers=self.headers, data=self.data, verify=False)
             response_json = response.json()
 
             if 'access_token' in response_json:
@@ -293,7 +324,7 @@ class FacebookLogin:
 
 
 # ==========================================================
-# PHẦN 3: CODE TỪ FILE nuoiacc.py (Nuôi Acc)
+# PHẦN 3: CODE NUÔI ACC (Giữ nguyên)
 # ==========================================================
 
 class FacebookAIBot:
@@ -308,7 +339,7 @@ class FacebookAIBot:
         payload = {"model": self.model, "messages": [{"role": "user", "content": prompt}], "temperature": 0.9, "max_tokens": 200}
         for attempt in range(3):
             try:
-                res = requests.post(self.api_url, headers=headers, json=payload, timeout=20, proxies=self.proxies)
+                res = requests.post(self.api_url, headers=headers, json=payload, timeout=20, proxies=self.proxies, verify=False)
                 if res.status_code == 200: return res.json()["choices"][0]["message"]["content"].strip()
                 elif res.status_code == 429: time.sleep(15)
                 else: break
@@ -354,7 +385,7 @@ def tao_phien(c_dict, proxies=None):
 def lay_metadata(s, proxies=None):
     meta = {"fb_dtsg": None, "lsd": None}
     try:
-        r = s.get("https://www.facebook.com/", timeout=15, proxies=proxies)
+        r = s.get("https://www.facebook.com/", timeout=15, proxies=proxies, verify=False)
         m = re.search(r'"DTSGInitialData":\{"token":"(.*?)"', r.text) or re.search(r'\["DTSGInitialData",\[\],\{"token":"(.*?)"\}', r.text)
         if m: meta["fb_dtsg"] = m.group(1)
         m = re.search(r'"LSD":\{"token":"(.*?)"', r.text) or re.search(r'\["LSD",\[\],\{"token":"(.*?)"\}', r.text)
@@ -362,7 +393,7 @@ def lay_metadata(s, proxies=None):
     except: pass
     if not meta["fb_dtsg"]:
         try:
-            r = s.get("https://business.facebook.com/", timeout=15, proxies=proxies)
+            r = s.get("https://business.facebook.com/", timeout=15, proxies=proxies, verify=False)
             m = re.search(r'name="fb_dtsg" value="([^"]+)"', r.text) or re.search(r'"DTSGInitialData",\[\],\{"token":"([^"]+)"', r.text)
             if m: meta["fb_dtsg"] = m.group(1)
         except: pass
@@ -374,7 +405,7 @@ def get_feed_posts(session, uid, fb_dtsg, jazoest, lsd, proxies=None):
     variables = {"count": 10, "cursor": None, "feedLocation": "NEWSFEED", "feedbackSource": 1, "orderby": ["TOP_STORIES"], "renderLocation": "homepage_stream", "scale": 3, "stream_initial_count": 1, "useDefaultActor": False}
     data = {"av": uid, "fb_dtsg": fb_dtsg, "jazoest": jazoest, "lsd": lsd, "__user": uid, "__a": "1", "fb_api_caller_class": "RelayModern", "fb_api_req_friendly_name": "CometNewsFeedPaginationQuery", "variables": json.dumps(variables, separators=(',', ':')), "doc_id": "29228242493495109", "server_timestamps": "true"}
     try:
-        res = session.post(url, headers=headers, data=data, timeout=15, proxies=proxies)
+        res = session.post(url, headers=headers, data=data, timeout=15, proxies=proxies, verify=False)
         posts = []
         for line in res.text.splitlines():
             try: obj = json.loads(line)
@@ -402,7 +433,7 @@ def get_feed_posts(session, uid, fb_dtsg, jazoest, lsd, proxies=None):
 def graph_dang_bai(caption_text, token, proxies=None):
     url = "https://graph.facebook.com/v26.0/me/feed"
     try:
-        res = requests.post(url, data={"caption": caption_text, "access_token": token}, timeout=15, proxies=proxies)
+        res = requests.post(url, data={"caption": caption_text, "access_token": token}, timeout=15, proxies=proxies, verify=False)
         js = res.json()
         if "id" in js: return js["id"] 
         else: return None
@@ -410,16 +441,16 @@ def graph_dang_bai(caption_text, token, proxies=None):
 
 def graph_tha_cam_xuc(full_post_id, reaction_type, token, proxies=None):
     url = f"https://graph.facebook.com/v26.0/{full_post_id}/reactions"
-    try: return requests.post(url, data={"type": reaction_type, "access_token": token}, timeout=15, proxies=proxies).status_code == 200
+    try: return requests.post(url, data={"type": reaction_type, "access_token": token}, timeout=15, proxies=proxies, verify=False).status_code == 200
     except: return False
 
 def graph_comment(full_post_id, message, token, proxies=None):
     url = f"https://graph.facebook.com/v26.0/{full_post_id}/comments"
-    try: return requests.post(url, data={"message": message, "access_token": token}, timeout=15, proxies=proxies).status_code == 200
+    try: return requests.post(url, data={"message": message, "access_token": token}, timeout=15, proxies=proxies, verify=False).status_code == 200
     except: return False
 
 # ==========================================================
-# PHẦN 4: API CHO FLASK VÀ QUẢN LÝ DỮ LIỆU
+# PHẦN 4: API FLASK
 # ==========================================================
 
 def load_db():
@@ -462,16 +493,17 @@ def add_account():
     save_db(accounts)
     return jsonify({'success': True})
 
-# API CHECK PROXY SỬ DỤNG HÀM kiem_tra_proxy
 @app.route('/api/check_proxy', methods=['POST'])
 def api_check_proxy():
     data = request.json
     proxy_str = data.get('proxy')
     if not proxy_str: return jsonify({'success': False, 'error': 'Proxy rỗng'})
     
+    proxies = tao_proxy(proxy_str)
     is_live, result = kiem_tra_proxy(proxy_str)
     if is_live:
-        return jsonify({'success': True, 'ip': result, 'speed': 1}) # Fake speed
+        info = get_ip_info(proxies)
+        return jsonify({'success': True, 'ip': result, 'country': info['country_code'], 'timezone': info['timezone']})
     else:
         return jsonify({'success': False, 'error': result})
 
@@ -493,11 +525,13 @@ def api_login_and_get_token():
     if not acc:
         return jsonify({'success': False, 'error': 'Không tìm thấy tài khoản'})
 
-    # GIỮ SESSION: Nếu đã có token_data thì không login lại
     if acc.get('token_data'):
         return jsonify({'success': True, 'message': 'Đã có session, giữ nguyên đăng nhập'})
 
     proxies = tao_proxy(acc.get('proxy'))
+    if not proxies:
+        return jsonify({'success': False, 'error': 'Vui lòng thêm Proxy (Bắt buộc để tránh bị block IP trên Render)'})
+
     try:
         fb = FacebookLogin(
             uid_phone_mail=acc['uid'], 
@@ -551,13 +585,13 @@ def start_bot():
     proxies = tao_proxy(acc.get('proxy'))
 
     def run_bot():
-        print(f"\n[{acc['uid']}] Bắt đầu nuôi acc (Giữ nguyên session)...")
+        print(f"\n[{acc['uid']}] Bắt đầu nuôi acc...")
         session = tao_phien(cookie_dict, proxies=proxies)
         meta = lay_metadata(session, proxies=proxies)
         fb_dtsg, lsd = meta.get("fb_dtsg"), meta.get("lsd")
         
         if not fb_dtsg: 
-            print(f"[{acc['uid']}] Lỗi: Không lấy được fb_dtsg. Cookie có thể đã hết hạn.")
+            print(f"[{acc['uid']}] Lỗi: Không lấy được fb_dtsg.")
             return
             
         jazoest = "2" + "".join(str(ord(c)) for c in fb_dtsg)
