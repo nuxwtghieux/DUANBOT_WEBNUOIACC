@@ -5,22 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>SNOW PANEL</title>
     <style>
-        :root {
-            --bg-body: #F3F6FC;
-            --bg-card: #FFFFFF;
-            --primary-blue: #5676FF;
-            --text-dark: #1A2035;
-            --text-gray: #8B96A9;
-            --green-success: #2DC988;
-            --green-bg: #E6F9F2;
-            --nav-height: 70px;
-        }
+        :root { --bg-body: #F3F6FC; --bg-card: #FFFFFF; --primary-blue: #5676FF; --text-dark: #1A2035; --text-gray: #8B96A9; --green-success: #2DC988; --green-bg: #E6F9F2; --nav-height: 70px; }
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: var(--bg-body); color: var(--text-dark); overflow: hidden; height: 100vh; width: 100vw; position: relative; }
-        
         #app-container { height: 100%; width: 100%; display: flex; flex-direction: column; position: relative; }
-        
-        /* Nội dung trang có padding-bottom lớn để không bị thanh nav che khuất */
         .page { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 50px 20px 120px 20px; display: none; }
         .page.active { display: block; animation: fadeIn 0.4s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -102,7 +90,7 @@
         
         .modal-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 500; display: flex; justify-content: center; align-items: center; padding: 20px; opacity: 0; visibility: hidden; transition: 0.3s; }
         .modal-overlay.show { opacity: 1; visibility: visible; }
-        .modal-content { background: var(--bg-card); width: 100%; max-width: 400px; border-radius: 24px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); transform: translateY(20px); transition: 0.3s; max-height: 90vh; overflow-y: auto;}
+        .modal-content { background: var(--bg-card); width: 100%; max-width: 400px; border-radius: 24px; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); transform: translateY(20px); transition: 0.3s; max-height: 90vh; overflow-y: auto; }
         .modal-overlay.show .modal-content { transform: translateY(0); }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .modal-header h3 { font-size: 20px; font-weight: 800; }
@@ -122,17 +110,7 @@
         .proxy-status.success { display: block; color: #1FA368; }
         .proxy-status.error { display: block; color: #FF4D4F; }
 
-        /* ================= BOTTOM NAVIGATION (FIXED Ở ĐÁY) ================= */
-        .bottom-nav-container { 
-            position: fixed; 
-            bottom: 20px; /* Hạ thấp xuống một chút so với trước */
-            left: 50%;
-            transform: translateX(-50%); /* Căn giữa màn hình */
-            width: calc(100% - 40px); /* Cách 2 bên 20px */
-            max-width: 500px; 
-            height: var(--nav-height); 
-            z-index: 9999; /* Luôn nổi lên trên cùng */
-        }
+        .bottom-nav-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); width: calc(100% - 40px); max-width: 500px; height: var(--nav-height); z-index: 9999; }
         .bottom-nav { background: #FFFFFF; border-radius: 35px; height: 100%; display: flex; justify-content: space-around; align-items: center; padding: 0 5px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08); position: relative; overflow: visible; }
         .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-gray); font-size: 10px; font-weight: 600; cursor: pointer; width: 33.33%; height: 100%; position: relative; }
         .nav-content { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; transform: translateY(0) scale(1); transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); position: relative; width: 100%; height: 100%; }
@@ -145,7 +123,6 @@
         .nav-item.active svg { stroke: var(--primary-blue); transform: scale(1.05); }
         .nav-item.active .icon-bg { transform: translate(-50%, -50%) scale(1); }
         .nav-item.active span { font-weight: 800; }
-
     </style>
 </head>
 <body>
@@ -153,6 +130,7 @@
 <div id="main-app">
     <div id="app-container">
         
+        <!-- TRANG CHỦ -->
         <div id="page-home" class="page active">
             <div class="header">
                 <div class="header-left">
@@ -214,6 +192,7 @@
             </div>
         </div>
 
+        <!-- TRANG TIỆN ÍCH -->
         <div id="page-utility" class="page">
             <div class="header-utility">
                 <h2 id="utility-title">Nuôi Acc</h2>
@@ -269,6 +248,7 @@
             </div>
         </div>
 
+        <!-- TRANG CÀI ĐẶT -->
         <div id="page-settings" class="page">
             <div class="header" style="margin-bottom: 20px;"><div class="header-left"><h1>Cài đặt</h1></div></div>
             <div class="settings-profile" style="background: var(--bg-card); border-radius: 24px; padding: 24px; display: flex; align-items: center; gap: 16px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03); margin-bottom: 24px;">
@@ -316,7 +296,7 @@
     </div>
 </div>
 
-<!-- MODAL THÊM TÀI KHOẢN (Đã thêm Proxy) -->
+<!-- MODAL THÊM TÀI KHOẢN (CÓ Ô PROXY) -->
 <div class="modal-overlay" id="add-account-modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -404,25 +384,7 @@
             statusBox.className = 'proxy-status error';
             statusBox.textContent = 'Vui lòng nhập proxy để check!';
             return;
-        try {
-            const res = await fetch('/api/check_proxy', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ proxy })
-            });
-            const data = await res.json();
-            
-            if (data.success) {
-                statusBox.className = 'proxy-status success';
-                statusBox.innerHTML = `✅ Live: ${data.ip} (${data.country} - ${data.timezone})`;
-            } else {
-                statusBox.className = 'proxy-status error';
-                statusBox.textContent = `❌ Die: ${data.error}`;
-            }
-        } catch (e) {
-            statusBox.className = 'proxy-status error';
-            statusBox.textContent = '❌ Lỗi kết nối server';
         }
-    }
 
         statusBox.className = 'proxy-status';
         statusBox.style.color = '#8B96A9';
@@ -438,7 +400,7 @@
             
             if (data.success) {
                 statusBox.className = 'proxy-status success';
-                statusBox.innerHTML = `✅ Live: ${data.ip} (${data.speed}s)`;
+                statusBox.innerHTML = `✅ Live: ${data.ip} (${data.country} - ${data.timezone})`;
             } else {
                 statusBox.className = 'proxy-status error';
                 statusBox.textContent = `❌ Die: ${data.error}`;
@@ -552,10 +514,9 @@
     async function startBot(accId) {
         const logBox = document.getElementById(`log-${accId}`);
         logBox.classList.add('show');
-        logBox.innerHTML = '<div class="log-line">Đang kiểm tra session (Giữ nguyên đăng nhập)...</div>';
+        logBox.innerHTML = '<div class="log-line">Đang kiểm tra session...</div>';
 
         try {
-            // Bước 1: Chỉ login nếu chưa có token (Giữ session)
             const resLogin = await fetch('/api/login_and_get_token', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: accId })
@@ -569,7 +530,6 @@
             
             logBox.innerHTML += `<div class="log-line" style="color:#65DDB0">Session OK! Đang chạy Bot...</div>`;
 
-            // Bước 2: Chạy Bot ngầm
             const resBot = await fetch('/api/start_bot', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: accId })
@@ -578,7 +538,7 @@
             if (!dataBot.success) {
                 logBox.innerHTML += `<div class="log-line" style="color:#FF6B6B">Lỗi Bot: ${dataBot.error}</div>`;
             }
-            loadAccounts(); // Cập nhật lại UID/Trạng thái
+            loadAccounts();
             
         } catch (e) {
             logBox.innerHTML += `<div class="log-line" style="color:#FF6B6B">Không kết nối được server.</div>`;
